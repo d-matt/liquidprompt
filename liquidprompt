@@ -325,6 +325,9 @@ _lp_source_config()
     LP_ENABLE_FQDN=${LP_ENABLE_FQDN:-0}
     # LP_DISABLED_VCS_PATH="${LP_DISABLED_VCS_PATH}"
     LP_ENABLE_SUDO=${LP_ENABLE_SUDO:-0}
+    LP_ENABLE_KUBE_CTX=${LP_ENABLE_KUBE_CTX:-0}
+    LP_ENABLE_KUBE_NS=${LP_ENABLE_KUBE_NS:-0}
+    LP_ENABLE_KUBE_USER=${LP_ENABLE_KUBE_USER:-0}
 
     LP_MARK_DEFAULT="${LP_MARK_DEFAULT:-$_LP_MARK_SYMBOL}"
     LP_MARK_BATTERY="${LP_MARK_BATTERY:-"⌁"}"
@@ -346,6 +349,8 @@ _lp_source_config()
     LP_MARK_SHORTEN_PATH="${LP_MARK_SHORTEN_PATH:-" … "}"
     LP_MARK_PREFIX="${LP_MARK_PREFIX:-" "}"
     LP_MARK_PERM="${LP_MARK_PERM:-":"}"
+    LP_MARK_KUBE=${LP_MARK_KUBE:-"☸ "}
+    LP_DELIMITER_KUBECONTEXT=${LP_DELIMITER_KUBECONTEXT:-"-"}
 
     LP_COLOR_PATH=${LP_COLOR_PATH:-$BOLD}
     LP_COLOR_PATH_ROOT=${LP_COLOR_PATH_ROOT:-$BOLD_YELLOW}
@@ -381,6 +386,9 @@ _lp_source_config()
     LP_COLOR_IN_MULTIPLEXER=${LP_COLOR_IN_MULTIPLEXER:-$BOLD_BLUE}
     LP_COLOR_RUNTIME=${LP_COLOR_RUNTIME:-$YELLOW}
     LP_COLOR_VIRTUALENV=${LP_COLOR_VIRTUALENV:-$CYAN}
+    LP_COLOR_KUBE_CTX=${LP_COLOR_KUBE_CTX:-$BOLD_BLUE}
+    LP_COLOR_KUBE_NS=${LP_COLOR_KUBE_NS:-$GREEN}
+    LP_COLOR_KUBE_USER=${LP_COLOR_KUBE_USER:-$YELLOW}
 
     if [[ -z "${LP_COLORMAP-}" ]]; then
         LP_COLORMAP=(
@@ -1459,6 +1467,40 @@ if (( LP_ENABLE_RUNTIME || LP_ENABLE_RUNTIME_BELL)); then
     fi
 fi
 
+######################
+# Kubernetes context #
+######################
+
+_lp_kube_context()
+{
+    (( LP_ENABLE_KUBE_CTX )) || return
+
+    local _LP_KUBE_CONTEXT=$(kubectl config current-context 2>/dev/null)
+    if [[ "$LP_DELIMITER_KUBECONTEXT" ]]; then
+        echo "${_LP_KUBE_CONTEXT%%${LP_DELIMITER_KUBECONTEXT}*}"
+    else
+        echo "$_LP_KUBE_CONTEXT"
+    fi
+}
+
+_lp_kube_ns()
+{
+    (( LP_ENABLE_KUBE_NS )) || return
+
+    local _LP_KUBE_CONTEXT=$(kubectl config current-context 2>/dev/null)
+    local _LP_KUBE_NS=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"${_LP_KUBE_CONTEXT}\")].context.namespace}" 2>/dev/null)
+    echo "$_LP_KUBE_NS"
+}
+
+_lp_kube_user()
+{
+    (( LP_ENABLE_KUBE_USER )) || return
+
+    local _LP_KUBE_CONTEXT=$(kubectl config current-context 2>/dev/null)
+    local _LP_KUBE_USER=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"${_LP_KUBE_CONTEXT}\")].context.user}" 2>/dev/null)
+    echo "$_LP_KUBE_USER"
+}
+
 ###############
 # System load #
 ###############
@@ -1738,6 +1780,26 @@ _lp_set_prompt()
         LP_VENV=
     fi
 
+    # add Kubernetes context, if available
+    LP_KUBE_CTX=$(_lp_kube_context)
+    LP_KUBE_NS=$(_lp_kube_ns)
+    LP_KUBE_USER=$(_lp_kube_user)
+    if [[ "${LP_KUBE_CTX-}${LP_KUBE_NS-}${LP_KUBE_USER-}" = ?* ]]; then
+        LP_KUBE=" [${LP_COLOR_KUBE_CTX}${LP_MARK_KUBE}${NO_COL}"
+        if [[ "$LP_ENABLE_KUBE_USER,${LP_KUBE_USER-}" = 1,?* ]]; then
+            LP_KUBE+="${LP_COLOR_KUBE_USER}${LP_KUBE_USER}@${NO_COL}"
+        fi
+        if [[ "$LP_ENABLE_KUBE_CTX,${LP_KUBE_CONTEXT-}" = 1,?* ]]; then
+            LP_KUBE+="${LP_COLOR_KUBE_CTX}${LP_KUBE_CTX}:${NO_COL}"
+        fi
+        if [[ "$LP_ENABLE_KUBE_NS,${LP_KUBE_NS-}" = 1,?* ]]; then
+            LP_KUBE+="${LP_COLOR_KUBE_NS}${LP_KUBE_NS}${NO_COL}"
+        fi
+        LP_KUBE+="]"
+    else
+        LP_KUBE=
+    fi
+
     # Display the current software collections enabled, if available
     if [[ "$LP_ENABLE_SCLS,${X_SCLS-}" = 1,?* ]]; then
         LP_SCLS=" [${LP_COLOR_VIRTUALENV}${X_SCLS%"${X_SCLS##*[![:space:]]}"}${NO_COL}]"
@@ -1842,7 +1904,7 @@ _lp_set_prompt()
         # add user, host and permissions colon
         PS1+="${LP_BRACKET_OPEN}${LP_USER}${LP_HOST}${LP_PERM}"
 
-        PS1+="${LP_PWD}${LP_BRACKET_CLOSE}${LP_SCLS}${LP_VENV}${LP_PROXY}"
+        PS1+="${LP_PWD}${LP_BRACKET_CLOSE}${LP_SCLS}${LP_KUBE}${LP_VENV}${LP_PROXY}"
 
         # Add VCS infos
         # If root, the info has not been collected unless LP_ENABLE_VCS_ROOT
