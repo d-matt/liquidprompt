@@ -1487,8 +1487,7 @@ _lp_kube_ns()
 {
     (( LP_ENABLE_KUBE_NS )) || return
 
-    local _LP_KUBE_CONTEXT=$(kubectl config current-context 2>/dev/null)
-    local _LP_KUBE_NS=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"${_LP_KUBE_CONTEXT}\")].context.namespace}" 2>/dev/null)
+    local _LP_KUBE_NS=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"$1\")].context.namespace}" 2>/dev/null)
     echo "$_LP_KUBE_NS"
 }
 
@@ -1496,8 +1495,7 @@ _lp_kube_user()
 {
     (( LP_ENABLE_KUBE_USER )) || return
 
-    local _LP_KUBE_CONTEXT=$(kubectl config current-context 2>/dev/null)
-    local _LP_KUBE_USER=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"${_LP_KUBE_CONTEXT}\")].context.user}" 2>/dev/null)
+    local _LP_KUBE_USER=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"$1\")].context.user}" 2>/dev/null)
     echo "$_LP_KUBE_USER"
 }
 
@@ -1781,15 +1779,17 @@ _lp_set_prompt()
     fi
 
     # add Kubernetes context, if available
-    LP_KUBE_CTX=$(_lp_kube_context)
-    LP_KUBE_NS=$(_lp_kube_ns)
-    LP_KUBE_USER=$(_lp_kube_user)
+    if [[ "${LP_ENABLE_KUBE_CTX}" = 1 || "${LP_ENABLE_KUBE_USER}" = 1 || "${LP_ENABLE_KUBE_NS}" = 1 ]]; then
+        LP_KUBE_CTX=$(_lp_kube_context)
+    fi
+    LP_KUBE_NS=$(_lp_kube_ns $LP_KUBE_CTX)
+    LP_KUBE_USER=$(_lp_kube_user $LP_KUBE_CTX)
     if [[ "${LP_KUBE_CTX-}${LP_KUBE_NS-}${LP_KUBE_USER-}" = ?* ]]; then
         LP_KUBE=" [${LP_COLOR_KUBE_CTX}${LP_MARK_KUBE}${NO_COL}"
         if [[ "$LP_ENABLE_KUBE_USER,${LP_KUBE_USER-}" = 1,?* ]]; then
             LP_KUBE+="${LP_COLOR_KUBE_USER}${LP_KUBE_USER}@${NO_COL}"
         fi
-        if [[ "$LP_ENABLE_KUBE_CTX,${LP_KUBE_CONTEXT-}" = 1,?* ]]; then
+        if [[ "$LP_ENABLE_KUBE_CTX,${LP_KUBE_CTX-}" = 1,?* ]]; then
             LP_KUBE+="${LP_COLOR_KUBE_CTX}${LP_KUBE_CTX}:${NO_COL}"
         fi
         if [[ "$LP_ENABLE_KUBE_NS,${LP_KUBE_NS-}" = 1,?* ]]; then
