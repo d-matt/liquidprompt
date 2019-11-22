@@ -350,7 +350,6 @@ _lp_source_config()
     LP_MARK_PREFIX="${LP_MARK_PREFIX:-" "}"
     LP_MARK_PERM="${LP_MARK_PERM:-":"}"
     LP_MARK_KUBE=${LP_MARK_KUBE:-"☸ "}
-    LP_DELIMITER_KUBECONTEXT=${LP_DELIMITER_KUBECONTEXT:-"-"}
 
     LP_COLOR_PATH=${LP_COLOR_PATH:-$BOLD}
     LP_COLOR_PATH_ROOT=${LP_COLOR_PATH_ROOT:-$BOLD_YELLOW}
@@ -1467,38 +1466,6 @@ if (( LP_ENABLE_RUNTIME || LP_ENABLE_RUNTIME_BELL)); then
     fi
 fi
 
-######################
-# Kubernetes context #
-######################
-
-_lp_kube_context()
-{
-    (( LP_ENABLE_KUBE_CTX )) || return
-
-    local _LP_KUBE_CONTEXT=$(kubectl config current-context 2>/dev/null)
-    if [[ "$LP_DELIMITER_KUBECONTEXT" ]]; then
-        echo "${_LP_KUBE_CONTEXT%%${LP_DELIMITER_KUBECONTEXT}*}"
-    else
-        echo "$_LP_KUBE_CONTEXT"
-    fi
-}
-
-_lp_kube_ns()
-{
-    (( LP_ENABLE_KUBE_NS )) || return
-
-    local _LP_KUBE_NS=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"$1\")].context.namespace}" 2>/dev/null)
-    echo "$_LP_KUBE_NS"
-}
-
-_lp_kube_user()
-{
-    (( LP_ENABLE_KUBE_USER )) || return
-
-    local _LP_KUBE_USER=$(kubectl config view -o=jsonpath="{.contexts[?(@.name==\"$1\")].context.user}" 2>/dev/null)
-    echo "$_LP_KUBE_USER"
-}
-
 ###############
 # System load #
 ###############
@@ -1779,12 +1746,13 @@ _lp_set_prompt()
     fi
 
     # add Kubernetes context, if available
-    if [[ "${LP_ENABLE_KUBE_CTX}" = 1 || "${LP_ENABLE_KUBE_USER}" = 1 || "${LP_ENABLE_KUBE_NS}" = 1 ]]; then
-        LP_KUBE_CTX=$(_lp_kube_context)
-    fi
-    LP_KUBE_NS=$(_lp_kube_ns $LP_KUBE_CTX)
-    LP_KUBE_USER=$(_lp_kube_user $LP_KUBE_CTX)
-    if [[ "${LP_KUBE_CTX-}${LP_KUBE_NS-}${LP_KUBE_USER-}" = ?* ]]; then
+    if [ "$LP_ENABLE_KUBE_CTX" == "1" -o "$LP_ENABLE_KUBE_USER" == "1" -o "$LP_ENABLE_KUBE_NS" == "1" ]; then
+        LP_KUBE_INFO=$(kubectl config view --minify -o=jsonpath="{.contexts[0].name},{.contexts[0].context.namespace},{.contexts[0].context.user}" 2>/dev/null)
+
+        LP_KUBE_CTX=$(echo $LP_KUBE_INFO | cut -f1 -d,)
+        LP_KUBE_NS=$(echo $LP_KUBE_INFO | cut -f2 -d,)
+        LP_KUBE_USER=$(echo $LP_KUBE_INFO | cut -f3 -d,)
+
         LP_KUBE=" [${LP_COLOR_KUBE_CTX}${LP_MARK_KUBE}${NO_COL}"
         if [[ "$LP_ENABLE_KUBE_USER,${LP_KUBE_USER-}" = 1,?* ]]; then
             LP_KUBE+="${LP_COLOR_KUBE_USER}${LP_KUBE_USER}@${NO_COL}"

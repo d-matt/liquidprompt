@@ -181,9 +181,4 @@ LP_ENABLE_KUBE_CTX=0
 LP_ENABLE_KUBE_NS=0
 LP_ENABLE_KUBE_USER=0
 
-# Delimiter to shorten kubectl context.
-# E.g. when your context names are dev-cluster and test-cluster, set to "-"
-# in order to output "dev" and "test" in prompt.
-LP_DELIMITER_KUBECONTEXT=
-
 # vim: set et sts=4 sw=4 tw=120 ft=sh:
