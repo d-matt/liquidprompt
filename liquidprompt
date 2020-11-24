@@ -328,6 +328,8 @@ _lp_source_config()
     LP_ENABLE_KUBE_CTX=${LP_ENABLE_KUBE_CTX:-0}
     LP_ENABLE_KUBE_NS=${LP_ENABLE_KUBE_NS:-0}
     LP_ENABLE_KUBE_USER=${LP_ENABLE_KUBE_USER:-0}
+    LP_ENABLE_KUBECTX=${LP_ENABLE_KUBECTX:-1}
+    LP_ENABLE_KUBENS=${LP_ENABLE_KUBENS:-1}
 
     LP_MARK_DEFAULT="${LP_MARK_DEFAULT:-$_LP_MARK_SYMBOL}"
     LP_MARK_BATTERY="${LP_MARK_BATTERY:-"⌁"}"
@@ -470,6 +472,9 @@ _lp_require_tool SVN svn
 _lp_require_tool FOSSIL fossil
 _lp_require_tool HG hg
 _lp_require_tool BZR bzr
+
+#_lp_require_tool KUBECTX kubectx
+#_lp_require_tool KUBENS kubens
 
 if [[ "$LP_OS" = Darwin ]]; then
     _lp_require_tool BATT pmset
@@ -1747,11 +1752,18 @@ _lp_set_prompt()
 
     # add Kubernetes context, if available
     if [ "$LP_ENABLE_KUBE_CTX" == "1" -o "$LP_ENABLE_KUBE_USER" == "1" -o "$LP_ENABLE_KUBE_NS" == "1" ]; then
-        LP_KUBE_INFO=$(kubectl config view --minify -o=jsonpath="{.contexts[0].name},{.contexts[0].context.namespace},{.contexts[0].context.user}" 2>/dev/null)
 
-        LP_KUBE_CTX=$(echo $LP_KUBE_INFO | cut -f1 -d,)
-        LP_KUBE_NS=$(echo $LP_KUBE_INFO | cut -f2 -d,)
-        LP_KUBE_USER=$(echo $LP_KUBE_INFO | cut -f3 -d,)
+        # kubectx and kubens are more efficient
+        if [ "$LP_ENABLE_KUBECTX" == "1" ]; then
+            LP_KUBE_CTX=$(kubectx -c)
+            LP_KUBE_NS=$(kubens -c)
+        else # fallback to kubectl
+            LP_KUBE_INFO=$(kubectl config view --minify -o=jsonpath="{.contexts[0].name},{.contexts[0].context.namespace},{.contexts[0].context.user}" 2>/dev/null)
+
+            LP_KUBE_CTX=$(echo $LP_KUBE_INFO | cut -f1 -d,)
+            LP_KUBE_NS=$(echo $LP_KUBE_INFO | cut -f2 -d,)
+            LP_KUBE_USER=$(echo $LP_KUBE_INFO | cut -f3 -d,)
+        fi
 
         LP_KUBE=" [${LP_COLOR_KUBE_CTX}${LP_MARK_KUBE}${NO_COL}"
         if [[ "$LP_ENABLE_KUBE_USER,${LP_KUBE_USER-}" = 1,?* ]]; then
