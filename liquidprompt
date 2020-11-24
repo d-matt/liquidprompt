@@ -325,8 +325,9 @@ _lp_source_config()
     LP_ENABLE_FQDN=${LP_ENABLE_FQDN:-0}
     # LP_DISABLED_VCS_PATH="${LP_DISABLED_VCS_PATH}"
     LP_ENABLE_SUDO=${LP_ENABLE_SUDO:-0}
-    LP_ENABLE_KUBE_CTX=${LP_ENABLE_KUBE_CTX:-0}
-    LP_ENABLE_KUBE_NS=${LP_ENABLE_KUBE_NS:-0}
+    LP_ENABLE_KUBE=${LP_ENABLE_KUBE:-0}
+    LP_ENABLE_KUBE_CTX=${LP_ENABLE_KUBE_CTX:-1}
+    LP_ENABLE_KUBE_NS=${LP_ENABLE_KUBE_NS:-1}
     LP_ENABLE_KUBE_USER=${LP_ENABLE_KUBE_USER:-0}
     LP_ENABLE_KUBECTX=${LP_ENABLE_KUBECTX:-1}
     LP_ENABLE_KUBENS=${LP_ENABLE_KUBENS:-1}
@@ -473,8 +474,8 @@ _lp_require_tool FOSSIL fossil
 _lp_require_tool HG hg
 _lp_require_tool BZR bzr
 
-#_lp_require_tool KUBECTX kubectx
-#_lp_require_tool KUBENS kubens
+_lp_require_tool KUBECTX kubectx
+_lp_require_tool KUBENS kubens
 
 if [[ "$LP_OS" = Darwin ]]; then
     _lp_require_tool BATT pmset
@@ -1751,8 +1752,7 @@ _lp_set_prompt()
     fi
 
     # add Kubernetes context, if available
-    if [ "$LP_ENABLE_KUBE_CTX" == "1" -o "$LP_ENABLE_KUBE_USER" == "1" -o "$LP_ENABLE_KUBE_NS" == "1" ]; then
-
+    if [ "$LP_ENABLE_KUBE" == "1" ]; then
         # kubectx and kubens are more efficient
         if [ "$LP_ENABLE_KUBECTX" == "1" ]; then
             LP_KUBE_CTX=$(kubectx -c)
@@ -1907,6 +1907,15 @@ _lp_set_prompt()
         #PS1="\[\033[G\]${PS1}${NO_COL}"
     else
         PS1=$LP_PS1
+    fi
+}
+
+kube_toggle()
+{
+    if [ "$LP_ENABLE_KUBE" == "1" ]; then
+        export LP_ENABLE_KUBE=0
+    else
+        export LP_ENABLE_KUBE=1
     fi
 }
 

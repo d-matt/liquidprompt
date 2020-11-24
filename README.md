@@ -181,6 +181,7 @@ prompt-building process:
 * `LP_ENABLE_FQDN`, if you want the display of the fully qualified domain name
 * `LP_ENABLE_TIME`, if you want to display the time at which the prompt was shown
 * `LP_TIME_ANALOG`, if you want to show the time using an analog clock instead of numeric values
+* `LP_ENABLE_KUBE`, if you want to globaly show Kubernetes information
 * `LP_ENABLE_KUBE_CTX`, if you want to show the current Kubernetes context
 * `LP_ENABLE_KUBE_NS`, if you want to show the current Kubernetes namespace
 * `LP_ENABLE_KUBE_USER`, if you want to show the current Kubernetes user
